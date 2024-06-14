@@ -131,7 +131,11 @@ library Oracle {
         uint32 b
     ) private pure returns (bool) {
         // if there hasn't been overflow, no need to adjust
-        if (a <= time && b <= time) return a <= b;
+        if (a <= time){
+            if (b <= time) {
+                return a <= b;
+            }
+        } 
 
         uint256 aAdjusted = a > time ? a : a + 2**32;
         uint256 bAdjusted = b > time ? b : b + 2**32;
@@ -160,6 +164,7 @@ library Oracle {
         uint256 l = (index + 1) % cardinality; // oldest observation
         uint256 r = l + cardinality - 1; // newest observation
         uint256 i;
+        bool targetAtOrAfter;
         while (true) {
             i = (l + r) / 2;
 
@@ -173,10 +178,14 @@ library Oracle {
 
             atOrAfter = self[(i + 1) % cardinality];
 
-            bool targetAtOrAfter = lte(time, beforeOrAt.blockTimestamp, target);
+            targetAtOrAfter = lte(time, beforeOrAt.blockTimestamp, target);
 
             // check if we've found the answer!
-            if (targetAtOrAfter && lte(time, target, atOrAfter.blockTimestamp)) break;
+            if (targetAtOrAfter) {
+                if (lte(time, target, atOrAfter.blockTimestamp)) {
+                    break;
+                }
+            }
 
             if (!targetAtOrAfter) r = i - 1;
             else l = i + 1;
@@ -315,9 +324,10 @@ library Oracle {
     ) internal view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
         require(cardinality > 0, 'I');
 
-        tickCumulatives = new int56[](secondsAgos.length);
-        secondsPerLiquidityCumulativeX128s = new uint160[](secondsAgos.length);
-        for (uint256 i = 0; i < secondsAgos.length; i++) {
+        uint256 len = secondsAgos.length;
+        tickCumulatives = new int56[](len);
+        secondsPerLiquidityCumulativeX128s = new uint160[](len);
+        for (uint256 i = 0; i < len; i++) {
             (tickCumulatives[i], secondsPerLiquidityCumulativeX128s[i]) = observeSingle(
                 self,
                 time,

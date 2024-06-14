@@ -503,8 +503,10 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         // we don't need to checkTicks here, because invalid positions will never have non-zero tokensOwed{0,1}
         Position.Info storage position = positions.get(msg.sender, tickLower, tickUpper);
 
-        amount0 = amount0Requested > position.tokensOwed0 ? position.tokensOwed0 : amount0Requested;
-        amount1 = amount1Requested > position.tokensOwed1 ? position.tokensOwed1 : amount1Requested;
+        uint128 tokensOwed0 = position.tokensOwed0;
+        uint128 tokensOwed1 = position.tokensOwed1;
+        amount0 = amount0Requested > tokensOwed0 ? tokensOwed0 : amount0Requested;
+        amount1 = amount1Requested > tokensOwed1 ? tokensOwed1 : amount1Requested;
 
         if (amount0 > 0) {
             position.tokensOwed0 -= amount0;
@@ -640,9 +642,9 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             liquidity: cache.liquidityStart
         });
 
+        StepComputations memory step;
         // continue swapping as long as we haven't used the entire input/output and haven't reached the price limit
         while (state.amountSpecifiedRemaining != 0 && state.sqrtPriceX96 != sqrtPriceLimitX96) {
-            StepComputations memory step;
 
             step.sqrtPriceStartX96 = state.sqrtPriceX96;
 
@@ -851,17 +853,19 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         uint128 amount0Requested,
         uint128 amount1Requested
     ) external override lock onlyFactoryOwner returns (uint128 amount0, uint128 amount1) {
-        amount0 = amount0Requested > protocolFees.token0 ? protocolFees.token0 : amount0Requested;
-        amount1 = amount1Requested > protocolFees.token1 ? protocolFees.token1 : amount1Requested;
+        uint128 protocol_token0 = protocolFees.token0;
+        uint128 protocol_token1 = protocolFees.token1;
+        amount0 = amount0Requested > protocol_token0 ? protocol_token0 : amount0Requested;
+        amount1 = amount1Requested > protocol_token1 ? protocol_token1 : amount1Requested;
 
         if (amount0 > 0) {
-            if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
-            protocolFees.token0 -= amount0;
+            if (amount0 == protocol_token0) amount0--; // ensure that the slot is not cleared, for gas savings
+            protocolFees.token0 = protocol_token0 - amount0;
             TransferHelper.safeTransfer(token0, recipient, amount0);
         }
         if (amount1 > 0) {
-            if (amount1 == protocolFees.token1) amount1--; // ensure that the slot is not cleared, for gas savings
-            protocolFees.token1 -= amount1;
+            if (amount1 == protocol_token1) amount1--; // ensure that the slot is not cleared, for gas savings
+            protocolFees.token1 = protocol_token1 - amount1;
             TransferHelper.safeTransfer(token1, recipient, amount1);
         }
 
