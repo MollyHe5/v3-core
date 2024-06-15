@@ -84,10 +84,8 @@ library SwapMath {
         }
 
         // cap the output amount to not exceed the remaining output amount
-        if (!exactIn) {
-            if (amountOut > uint256(-amountRemaining)) {
-                amountOut = uint256(-amountRemaining);
-            }  
+        if (!exactIn && amountOut > uint256(-amountRemaining)) {
+            amountOut = uint256(-amountRemaining);
         }
 
         if (exactIn && sqrtRatioNextX96 != sqrtRatioTargetX96) {

@@ -131,11 +131,7 @@ library Oracle {
         uint32 b
     ) private pure returns (bool) {
         // if there hasn't been overflow, no need to adjust
-        if (a <= time){
-            if (b <= time) {
-                return a <= b;
-            }
-        } 
+        if (a <= time && b <= time) return a <= b; 
 
         uint256 aAdjusted = a > time ? a : a + 2**32;
         uint256 bAdjusted = b > time ? b : b + 2**32;
@@ -181,11 +177,7 @@ library Oracle {
             targetAtOrAfter = lte(time, beforeOrAt.blockTimestamp, target);
 
             // check if we've found the answer!
-            if (targetAtOrAfter) {
-                if (lte(time, target, atOrAfter.blockTimestamp)) {
-                    break;
-                }
-            }
+            if (targetAtOrAfter && lte(time, target, atOrAfter.blockTimestamp)) break;
 
             if (!targetAtOrAfter) r = i - 1;
             else l = i + 1;
